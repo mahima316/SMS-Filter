@@ -6,15 +6,15 @@ import numpy as np
 
 # for loading the dataset 
 df = pd.read_table('SMSSPamCollection', header=None, encoding='utf-8')
-print(df.info())
-print(df.head())
+#print(df.info())
+#print(df.head())
 classes = df[0]
-print(classes.value_counts())
+#print(classes.value_counts()) # got 4825 ham messages and 747 spam messages 
 from sklearn.preprocessing import LabelEncoder
 # giving binary values to the class labels, 0 = ham and 1 = spam
 encoder = LabelEncoder()
 Y = encoder.fit_transform(classes)
-print(Y[:10])
+#print(Y[:10])
 text_messages = df[1]
 
 #replacing email addresses, URLs, phone numbers, other numbers with regular expressions
@@ -28,6 +28,8 @@ processed = processed.str.replace(r'\d+(\.\d+)?', 'numbr')
 processed = processed.str.replace(r'[^\w\d\s]', ' ')
 processed = processed.str.replace(r'\s+', ' ')
 processed = processed.str.replace(r'^\s+|\s+?$', '')
+
+# changed words to lower case
 processed = processed.str.lower()
 
 from nltk.corpus import stopwords
@@ -39,6 +41,7 @@ processed = processed.apply(lambda x: ' '.join(term for term in x.split() if ter
 ps = nltk.PorterStemmer()
 processed = processed.apply(lambda x: ' '.join(ps.stem(term) for term in x.split()))
 
+#Creating bag-of-words
 from nltk.tokenize import word_tokenize
 all_words = []
 for message in processed:
@@ -47,10 +50,12 @@ for message in processed:
         all_words.append(w)
         
 all_words = nltk.FreqDist(all_words)
-print('Number of words: {}'.format(len(all_words)))
-print('Most common words: {}'.format(all_words.most_common(15)))
+#print('Number of words: {}'.format(len(all_words)))
+#print('Most common words: {}'.format(all_words.most_common(15)))
 
+# used 1500 most common words as features
 word_features = list(all_words.keys())[:1500]
+#define a find_features function
 def find_features(message):
     words = word_tokenize(message)
     features = {}
@@ -58,16 +63,21 @@ def find_features(message):
         features[word] = (word in words)
 return features
 
+# find features for all the messages
 messages = zip(processed, Y)
+
+# define a seed for reproducibility
 seed = 1
 np.random.seed = seed
 np.random.shuffle(messages)
+# call find_features function for each message
 featuresets = [(find_features(text), label) for (text, label) in messages]
 
+# splitting testing and training sets using sklearn
 from sklearn import model_selection
 training, testing = model_selection.train_test_split(featuresets, test_size = 0.25, random_state=seed)
-print(len(training))
-print(len(testing))
+#print(len(training))
+#print(len(testing))
 
 from nltk.classify.scikitlearn import SklearnClassifier
 from sklearn.svm import SVC
